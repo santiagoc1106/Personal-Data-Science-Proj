@@ -53,16 +53,16 @@ async def main() -> None:
             plt.figure(figsize=(12, 5))
             plt.plot(weatherDF.index, weatherDF['temperature'], label='Temperature (°F)', color='orange', marker='o')
             plt.plot(weatherDF.index, weatherDF['humidity'], label='Humidity (%)', color='blue', linestyle='--')
+            plt.plot(weatherDF.index, weatherDF['precipitation'], label='Precipitation (inches)', color='green', linestyle=':')
             plt.ylabel('Value')
             plt.xlabel('Forecast Timeline Point')
             plt.title(f'Hourly Weather Forecast Trends for {city.capitalize()}')
             plt.legend()
             plt.grid(True)
             plt.show()
+
         else:
             print("Thank you for using the weather app!")
-
-
 
 
 
