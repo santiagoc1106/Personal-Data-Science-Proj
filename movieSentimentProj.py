@@ -22,6 +22,18 @@ from transformers import (
 )
 import evaluate
 
+import os
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"       # only show actual errors, not info/warnings
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"      # suppress download progress bars
+os.environ["TOKENIZERS_PARALLELISM"] = "false"        # silences a common tokenizer warning
+os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1" # suppress advisory-style warnings
+
+import warnings
+warnings.filterwarnings("ignore")  # catch any remaining Python-level warnings (e.g. deprecation notices)
+
+from transformers.utils import logging
+logging.set_verbosity_error()
+
 
 # ============================================================
 # SECTION 1: TRAINING THE SENTIMENT CLASSIFIER
