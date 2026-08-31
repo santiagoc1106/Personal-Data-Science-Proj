@@ -135,7 +135,7 @@ def load_generator():
     """Loads the instruction-tuned text-generation model for plot overviews."""
     return pipeline(
         "text-generation",
-        model="Qwen/Qwen2.5-1.5B-Instruct",
+        model="Qwen/Qwen2.5-3B-Instruct",
         dtype=torch.bfloat16,
         device_map="auto",
     )
@@ -150,7 +150,7 @@ def load_emotion_classifier():
     )
 
 
-def generate_movie_overview(movie_title, generator, emotion_classifier):
+def generate_movie_overview(movie_title, generator, emotion_classifier, prompt):
     """Generates a short plot overview for a movie and analyzes its emotional tone.
 
     Note: the overview is LLM-generated from the model's own knowledge, not pulled
@@ -159,20 +159,39 @@ def generate_movie_overview(movie_title, generator, emotion_classifier):
     overview as illustrative text for the emotion analysis, not a factual summary.
     """
     messages = [
-        {"role": "user", "content": f"Please write a 2-3 sentence overview of the plot of {movie_title}"}
+        {"role": "user", "content": f"{prompt} about the movie {movie_title}."}
     ]
+
+    classification = [
+        {"role": "user", "content": f"Does this request call for descriptive, emotional, or narrative text? "
+                                 f"Respond with ONLY the single word 'yes' or 'no' — no other text. "
+                                 f"Request: {prompt}"}
+    ]
+
+    classResult = generator(classification, max_new_tokens = 50, do_sample = False)
+    classText = classResult[0]["generated_text"][-1]["content"]
+
+    print(f"DEBUG - raw classification response: '{classText}'")
 
     result = generator(messages, max_new_tokens=100, do_sample=True, temperature=0.7)
     overview_text = result[0]["generated_text"][-1]["content"]
 
-    emotions = emotion_classifier(overview_text)[0]  # sorted highest -> lowest
+    emotion_keywords = ["emotion", "feel", "mood", "tone", "sentiment", "emotional"]
+    override = any(keyword in prompt.lower() for keyword in emotion_keywords)
 
     print(f"Movie: {movie_title}")
     print(f"Overview: {overview_text}")
-    print(f"\nTop emotion: {emotions[0]['label']} ({emotions[0]['score']:.2%})")
-    print("\nFull emotion scale:")
-    for emotion in emotions:
-        print(f"  {emotion['label']}: {emotion['score']:.2%}")
+
+    runEmotion = classText.strip().lower().startswith("yes") or override
+
+    if runEmotion:
+            emotions = emotion_classifier(overview_text)[0]  # sorted highest -> lowest
+            print(f"\nTop emotion: {emotions[0]['label']} ({emotions[0]['score']:.2%})")
+            print("\nFull emotion scale:")
+            for emotion in emotions:
+                print(f"  {emotion['label']}: {emotion['score']:.2%}")
+    else:
+            emotions = ""
 
     return overview_text, emotions
 
@@ -200,6 +219,8 @@ if __name__ == "__main__":
     generator = load_generator()
     emotion_classifier = load_emotion_classifier()
 
-    movie_title = input("Enter a movie title to generate an overview and analyze its emotional tone: ")
+    movie_title = input("Enter a movie title: ")
+    userPrompt = input(f"What would you like to know about {movie_title}? ")
 
-    generate_movie_overview(movie_title, generator, emotion_classifier)
+
+    generate_movie_overview(movie_title, generator, emotion_classifier, prompt=userPrompt)
